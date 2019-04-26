@@ -1,5 +1,5 @@
 // Set your project Prefix
-def prefix = "dvb"
+def prefix = "969f"
 
 // Set variable globally to be available in all stages
 // Set Maven command to always include Nexus Settings
@@ -25,7 +25,7 @@ pipeline {
   steps {
     // Replace xyz-gogs with the name of your Gogs project
     // Replace the credentials with your credentials.
-    git credentialsId: 'df424b55-d0cf-4c86-a29b-fce8e1f38b73', url: 'http://gogs-dvb-gogs.apps.de98.openshift.opentlc.com/CICDLabs/openshift-tasks-private.git'
+    git url: 'https://github.com/redhat-gpte-devopsautomation/openshift-tasks.git'
     // or when using the Pipeline from the repo itself:
     // checkout scm
 
@@ -67,7 +67,7 @@ stage('Code Analysis') {
   steps {
     script {
       echo "Running Code Analysis"
-        sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube-${prefix}-sonarqube.apps.de98.openshift.opentlc.com/ -Dsonar.projectName=${JOB_BASE_NAME} -Dsonar.projectVersion=${devTag}"
+        sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube-gpte-hw-cicd.apps.na311.openshift.opentlc.com/ -Dsonar.projectName=${JOB_BASE_NAME} -Dsonar.projectVersion=${devTag}"
     }
   }
 }
@@ -76,7 +76,7 @@ stage('Code Analysis') {
 stage('Publish to Nexus') {
   steps {
     echo "Publish to Nexus"
-      sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://nexus3.${prefix}-nexus.svc.cluster.local:8081/repository/releases"
+      sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/all-maven-public"
   }
 }
 
@@ -113,7 +113,7 @@ stage('Deploy to Dev') {
           //openshift.set("image", "dc/tasks", "tasks=image-registry.openshift-image-registry.svc:5000/${devProject}/tasks:${devTag}")
 
           // For OpenShift 3 use this:
-          openshift.set("image", "dc/tasks", "tasks=docker-registry.default.svc:5000/${devProject}/tasks:${devTag}")
+          openshift.set("image", "dc/tasks", "tasks=nexus-registry.gpte-hw-cicd.svc.cluster.local:5000//${devProject}/tasks:${devTag}")
 
           // Update the Config Map which contains the users for the Tasks application
           // (just in case the properties files changed in the latest commit)
@@ -174,9 +174,9 @@ stage('Copy Image to Nexus Docker Registry') {
   steps {
     echo "Copy image to Nexus Docker Registry"
     script {
-      //sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://nexus-registry-dvb-nexus.apps.de98.openshift.opentlc.com/${devProject}/tasks:${devTag} docker://nexus3-registry.${prefix}-nexus.svc.cluster.local:5000/tasks:${devTag}"
+      //sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:redhat docker://nexus-registry-gpte-hw-cicd.apps.na311.openshift.opentlc.com/${devProject}/tasks:${devTag} docker://nexus3-registry.${prefix}-nexus.svc.cluster.local:5000/tasks:${devTag}"
 // Use this for OpenShift 3
-sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${devProject}/tasks:${devTag} docker://nexus-registry-dvb-nexus.apps.de98.openshift.opentlc.com/tasks:${devTag}"
+sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:redhat docker://nexus-registry.gpte-hw-cicd.svc.cluster.local:5000/${devProject}/tasks:${devTag} docker://nexus3.gpte-hw-cicd.svc.cluster.local:8081/tasks:${devTag}"
 
       // Tag the built image with the production tag.
       openshift.withCluster() {
@@ -208,7 +208,7 @@ stage('Blue/Green Production Deployment') {
           def dc = openshift.selector("dc/${destApp}").object()
           //dc.spec.template.spec.containers[0].image="image-registry.openshift-image-registry.svc:5000/${devProject}/tasks:${prodTag}"
           // Use this for OpenShift 3
-          dc.spec.template.spec.containers[0].image="docker-registry.default.svc:5000/${devProject}/tasks:${prodTag}"
+          dc.spec.template.spec.containers[0].image="nexus-registry.gpte-hw-cicd.svc.cluster.local:5000/${devProject}/tasks:${prodTag}"
           openshift.apply(dc)
 
           // Update Config Map in change config files changed in the source
