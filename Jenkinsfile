@@ -76,7 +76,7 @@ stage('Code Analysis') {
 stage('Publish to Nexus') {
   steps {
     echo "Publish to Nexus"
-      sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/all-maven-public"
+      sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://nexus3-gpte-hw-cicd.apps.na311.openshift.opentlc.com/repository/maven-all-public/"
   }
 }
 
