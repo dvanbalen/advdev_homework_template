@@ -1,4 +1,4 @@
-// Set your project Prefix
+// Set your guid
 def prefix = "969f"
 
 // Set variable globally to be available in all stages
